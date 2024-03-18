@@ -63,7 +63,60 @@ def combine_and_verify_booking_data(
     # Assert time difference in bookings
     assert_time_difference_in_bookings(df_list_sorted, csv_files_sorted)
 
-    return df_list_sorted, csv_files_sorted
+    return merge_nonoverlapping_dfs(df_list_sorted)
+
+
+def merge_nonoverlapping_dfs(df_list_sorted):
+    """
+    This function combines a list of sorted pandas DataFrame objects, ensuring
+    that there are no duplicated records due to overlaps.
+
+    The function assumes that the DataFrames in 'df_list_sorted' are already
+    sorted by the column "anfang" (beginning) in ascending order and that they
+    may contain overlaps. It removes the overlaps by only including records in
+    each DataFrame that have a timestamp greater than the maximum timestamp in
+    the previous DataFrame.
+
+    Parameters
+    ----------
+    df_list_sorted : list of pandas.DataFrame
+        The sorted list of pandas DataFrames to be combined. Each DataFrame
+        should have a column named "anfang" representing timestamps.
+
+    Returns
+    -------
+    pandas.DataFrame
+        The merged DataFrame without overlaps.
+
+    Raises
+    ------
+    ValueError
+        If 'df_list_sorted' is not a list or if any element in 'df_list_sorted'
+        is not a pandas DataFrame.
+    """
+
+    # Ensure 'df_list_sorted' is a list and all its elements are pandas DataFrame objects
+    if not isinstance(df_list_sorted, list) or not all(
+        isinstance(df, pd.DataFrame) for df in df_list_sorted
+    ):
+        raise ValueError(
+            "'df_list_sorted' should be a list of pandas DataFrame objects"
+        )
+
+    master_df = df_list_sorted[0]
+
+    for i in range(1, len(df_list_sorted)):
+        last_date_master_df = master_df["anfang"].max()
+
+        # Include only those records in the current DataFrame that have a timestamp greater
+        # than the maximum timestamp in the previous (master) DataFrame
+        new_data = df_list_sorted[i][
+            df_list_sorted[i]["anfang"] > last_date_master_df
+        ]
+
+        master_df = pd.concat([master_df, new_data])
+
+    return master_df
 
 
 def verify_overlapping_bookings(df_list_sorted):
